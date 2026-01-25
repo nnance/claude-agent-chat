@@ -43,7 +43,7 @@ Building a web application that provides a chat interface for interacting with a
       "Install core shadcn/ui components (button, input, card, scroll-area)",
       "Configure component styling and theming"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "setup",
