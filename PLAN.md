@@ -22,7 +22,7 @@ Building a web application that provides a chat interface for interacting with a
       "Install BiomeJS for linting and formatting",
       "Setup basic project structure (app dir, components, lib)"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "setup",
