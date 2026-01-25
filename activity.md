@@ -3,8 +3,8 @@
 ## Current Status
 
 **Last Updated:** 2026-01-25
-**Tasks Completed:** 12
-**Current Task:** Task 12 - Implement clean, minimal chat UI design completed
+**Tasks Completed:** 13
+**Current Task:** Task 13 - Create session sidebar for history navigation completed
 
 ---
 
@@ -504,3 +504,49 @@
   - Fixed by adding `!important` to user-message-bubble background and color properties
 
 **Result:** Task completed successfully. Chat UI now has a clean, minimal design with distinct message bubbles, smooth animations, and responsive layout.
+
+### 2026-01-25 - Task 13: Create session sidebar for history navigation
+
+**Changes Made:**
+- Created components/session-sidebar.tsx with SessionSidebar component:
+  - Built sidebar component with session list fetched from /api/sessions
+  - Displays session titles and relative timestamps (e.g., "10:12 PM", "Yesterday", "3 days ago")
+  - Added status icons for different session states (active, completed, archived)
+  - Implemented collapsible/expandable behavior with smooth transition animations
+  - Added "New Chat" button to create new sessions
+  - Active session highlighting with accent background color
+  - Footer shows session count when collapsed
+- Updated app/page.tsx to integrate sidebar:
+  - Added SessionSidebar import and component
+  - Implemented currentSessionId state tracking
+  - Created loadSessionHistory function for loading session conversations
+  - Added handleSessionSelect callback for switching between sessions
+  - Added handleNewSession callback for creating new sessions
+  - Restructured layout to flex with sidebar on left and chat area on right
+- Fixed timestamp formatting edge case where negative diff days showed "-1 days ago"
+  - Changed condition from `diffDays === 0` to `diffDays <= 0` to handle timezone edge cases
+
+**Task Requirements Verified:**
+1. Build sidebar component with session list - Session list fetched from API and displayed
+2. Display session titles and timestamps - Shows title (or "New Chat") and relative time
+3. Add active session highlighting - Selected session has accent background
+4. Implement session selection/switching - Click session to load its conversation history
+5. Style with collapsible/expandable behavior - Toggles between 256px expanded and 56px collapsed width
+
+**Commands Run:**
+- `npm run lint` - passed
+- `npm run format` - passed (fixed 2 files)
+- `npm run typecheck` - passed
+- `npm run build` - passed
+- `npm run dev` - server running on port 3000
+
+**Screenshots:**
+- screenshots/13-sidebar-expanded.png - Sidebar expanded with session list
+- screenshots/13-sidebar-collapsed.png - Sidebar collapsed showing icons only
+- screenshots/13-sidebar-fixed.png - Final UI with fixed timestamp formatting
+
+**Issues Encountered:**
+- Timestamp showed "-1 days ago" due to timezone difference between database (UTC) and browser
+  - Fixed by treating diffDays <= 0 as "today" and showing time instead
+
+**Result:** Task completed successfully. Session sidebar implemented with collapsible behavior, session list with timestamps, and session switching functionality.

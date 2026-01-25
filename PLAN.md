@@ -162,7 +162,7 @@ Building a web application that provides a chat interface for interacting with a
       "Implement session selection/switching",
       "Style with collapsible/expandable behavior"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "integration",
