@@ -116,9 +116,18 @@ export default function Home() {
 							placeholder="Type your message..."
 							value={inputValue}
 							onChange={(e) => setInputValue(e.target.value)}
+							disabled={isLoading}
 						/>
 						<PromptInputFooter>
-							<div />
+							<div className="text-xs text-muted-foreground">
+								{isLoading ? (
+									"Agent is processing..."
+								) : (
+									<span className="hidden sm:inline">
+										Press Enter to send, Shift+Enter for new line
+									</span>
+								)}
+							</div>
 							<PromptInputSubmit
 								status={status}
 								onStop={stop}

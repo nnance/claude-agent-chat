@@ -114,7 +114,7 @@ Building a web application that provides a chat interface for interacting with a
       "Disable input while agent is processing",
       "Clear input after sending message"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "feature",
