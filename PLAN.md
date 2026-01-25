@@ -78,7 +78,7 @@ Building a web application that provides a chat interface for interacting with a
       "Add error handling and logging",
       "Store messages in database"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "feature",
