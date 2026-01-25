@@ -2,7 +2,7 @@
 
 We are building the project according to the `PRD.md` in this repo.
 
-First read activity.md to see what was recently accomplished.
+First read `activity.md` to see what was recently accomplished.
 
 ## Start the Application
 
