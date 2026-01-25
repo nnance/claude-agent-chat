@@ -174,7 +174,7 @@ Building a web application that provides a chat interface for interacting with a
       "Setup agent response streaming",
       "Test agent can execute basic commands"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "feature",

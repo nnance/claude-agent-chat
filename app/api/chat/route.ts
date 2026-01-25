@@ -196,14 +196,49 @@ export async function POST(request: Request) {
 		const stream = new ReadableStream({
 			async start(controller) {
 				try {
-					// Query Claude Agent SDK
+					// Query Claude Agent SDK with full tool permissions
+					// Configure agent with all necessary capabilities for autonomous task execution
 					const agentQuery = query({
 						prompt: contextPrompt,
 						options: {
+							// Working directory for file operations
 							cwd: process.cwd(),
+							// Additional directories the agent can access
+							additionalDirectories: [
+								"/Users", // Allow access to user home directories
+								"/tmp", // Allow access to temp files
+							],
+							// Use all default Claude Code tools (file ops, bash, etc.)
+							tools: { type: "preset", preset: "claude_code" },
+							// Auto-allow all core tools without prompting
+							allowedTools: [
+								"Read",
+								"Write",
+								"Edit",
+								"Bash",
+								"Glob",
+								"Grep",
+								"Task",
+								"WebFetch",
+								"TodoWrite",
+								"NotebookEdit",
+							],
+							// Bypass all permission checks for autonomous execution
 							permissionMode: "bypassPermissions",
 							allowDangerouslySkipPermissions: true,
+							// Enable streaming for real-time responses
 							includePartialMessages: true,
+							// Don't persist SDK sessions (we handle our own session management)
+							persistSession: false,
+							// Load project-level settings for CLAUDE.md context
+							settingSources: ["project"],
+							// Custom system prompt for agent behavior
+							systemPrompt: {
+								type: "preset",
+								preset: "claude_code",
+								append:
+									"You are an autonomous agent running on the user's local machine. Execute tasks efficiently and provide clear summaries of your work. When performing file operations or commands, proceed without asking for confirmation.",
+							},
 						},
 					});
 
