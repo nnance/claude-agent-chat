@@ -14,12 +14,50 @@ import type { Conversation } from "@/lib/db";
 export const runtime = "nodejs";
 export const maxDuration = 300; // 5 minutes max for long-running tasks
 
+// Part types for Vercel AI SDK v3 UIMessage format
+interface TextPart {
+	type: "text";
+	text: string;
+}
+
+interface UIMessagePart {
+	type: string;
+	text?: string;
+}
+
+interface UIMessage {
+	id: string;
+	role: "user" | "assistant";
+	parts?: UIMessagePart[];
+	content?: string; // Legacy format
+}
+
 interface ChatRequestBody {
-	messages: Array<{
-		role: "user" | "assistant";
-		content: string;
-	}>;
+	messages: UIMessage[];
 	sessionId?: number;
+}
+
+/**
+ * Extract text content from a UIMessage (handles both parts array and legacy content string)
+ */
+function extractTextFromUIMessage(message: UIMessage): string {
+	// Handle legacy format with content string
+	if (message.content && typeof message.content === "string") {
+		return message.content;
+	}
+
+	// Handle new format with parts array
+	if (message.parts && Array.isArray(message.parts)) {
+		return message.parts
+			.filter(
+				(part): part is TextPart =>
+					part.type === "text" && typeof part.text === "string",
+			)
+			.map((part) => part.text)
+			.join("");
+	}
+
+	return "";
 }
 
 /**
@@ -91,11 +129,23 @@ export async function POST(request: Request) {
 			);
 		}
 
+		// Extract text content from the message (handles both parts array and legacy content)
+		const userMessageContent = extractTextFromUIMessage(latestMessage);
+		if (!userMessageContent) {
+			return new Response(
+				JSON.stringify({ error: "Message content is required" }),
+				{
+					status: 400,
+					headers: { "Content-Type": "application/json" },
+				},
+			);
+		}
+
 		// Store the user message in database
 		createConversation({
 			session_id: session.id,
 			role: "user",
-			content: latestMessage.content,
+			content: userMessageContent,
 		});
 
 		// Get conversation history for context
@@ -107,8 +157,8 @@ export async function POST(request: Request) {
 		// Build context from history if needed
 		const contextPrompt =
 			historyMessages.length > 0
-				? `Previous conversation:\n${historyMessages.map((m) => `${m.role}: ${m.content}`).join("\n")}\n\nUser: ${latestMessage.content}`
-				: latestMessage.content;
+				? `Previous conversation:\n${historyMessages.map((m) => `${m.role}: ${m.content}`).join("\n")}\n\nUser: ${userMessageContent}`
+				: userMessageContent;
 
 		// Create a streaming response using the Vercel AI SDK data stream protocol
 		const encoder = new TextEncoder();
@@ -184,8 +234,8 @@ export async function POST(request: Request) {
 						if (conversationHistory.length <= 1 && !session.title) {
 							// Use first few words of user message as title
 							const title =
-								latestMessage.content.slice(0, 50) +
-								(latestMessage.content.length > 50 ? "..." : "");
+								userMessageContent.slice(0, 50) +
+								(userMessageContent.length > 50 ? "..." : "");
 							updateSessionTitle(session.id, title);
 						}
 					}

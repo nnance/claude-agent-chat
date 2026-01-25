@@ -3,8 +3,8 @@
 ## Current Status
 
 **Last Updated:** 2026-01-25
-**Tasks Completed:** 9
-**Current Task:** Task 9 - Create message input component completed
+**Tasks Completed:** 10
+**Current Task:** Task 10 - Implement conversation history persistence completed
 
 ---
 
@@ -363,3 +363,50 @@
 - The message input component itself is working correctly
 
 **Result:** Task completed successfully. Message input component implemented with all required features.
+
+### 2026-01-25 - Task 10: Implement conversation history persistence
+
+**Changes Made:**
+- Updated app/api/chat/route.ts to handle Vercel AI SDK v3 message format:
+  - Added new types: TextPart, UIMessagePart, UIMessage for proper typing
+  - Added `extractTextFromUIMessage()` function to extract text from both `parts` array and legacy `content` string formats
+  - Fixed "NOT NULL constraint failed: conversations.content" error by properly extracting message content
+  - Updated all references to use `userMessageContent` instead of `latestMessage.content`
+- Created app/api/sessions/current/route.ts endpoint:
+  - GET /api/sessions/current - Returns current active session with conversation history
+  - Automatically creates a new session if none exists
+- Updated app/page.tsx to load and display conversation history:
+  - Added types: DbConversation, SessionResponse for API response typing
+  - Added `convertToUIMessages()` function to convert database conversations to UIMessage format
+  - Added useEffect to fetch conversation history from /api/sessions/current on mount
+  - Used `setMessages()` from useChat hook to populate messages after API response
+  - Added loading state indicator while fetching history
+- Conversations now persist across page refreshes
+
+**Task Requirements Verified:**
+1. Save user messages to database on send - handled by API route (already implemented)
+2. Save assistant responses after streaming completes - handled by API route (already implemented)
+3. Load conversation history on page load - implemented via /api/sessions/current endpoint and useEffect
+4. Display messages in chronological order - messages from DB are ordered by timestamp ASC
+5. Session context is maintained - same session ID used across requests
+
+**Commands Run:**
+- `npm run lint` - passed
+- `npm run format` - passed (fixed 1 file)
+- `npm run typecheck` - passed
+- `npm run build` - passed
+- `npm run dev` - server running on port 3000
+- `npm run db:init` - database initialized
+
+**Screenshots:**
+- screenshots/10-conversation-persistence-empty.png - Empty state before any messages
+- screenshots/10-conversation-persistence-loaded.png - Loaded conversation history from database
+- screenshots/10-persistence-after-refresh.png - History persists after page refresh
+
+**Issues Encountered:**
+- Vercel AI SDK v3 sends messages with `parts` array instead of `content` string
+  - Fixed by adding `extractTextFromUIMessage()` to handle both formats
+- `useChat` hook's `messages` prop only sets initial state, doesn't update reactively
+  - Fixed by using `setMessages()` function to update messages after API fetch
+
+**Result:** Task completed successfully. Conversation history now persists in SQLite database and loads on page refresh.

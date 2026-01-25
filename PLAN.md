@@ -126,7 +126,7 @@ Building a web application that provides a chat interface for interacting with a
       "Display messages in chronological order",
       "Ensure session context is maintained"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "feature",

@@ -1,8 +1,9 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
+import type { UIMessage } from "ai";
 import { DefaultChatTransport } from "ai";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import {
 	Card,
 	CardContent,
@@ -30,6 +31,40 @@ import {
 } from "@/components/ai-elements/prompt-input";
 import { MessageCircle } from "lucide-react";
 
+// Database conversation type
+interface DbConversation {
+	id: number;
+	session_id: number;
+	role: "user" | "assistant";
+	content: string;
+	timestamp: string;
+	metadata: string | null;
+}
+
+// Session response from API
+interface SessionResponse {
+	session: {
+		id: number;
+		created_at: string;
+		updated_at: string;
+		status: string;
+		title: string | null;
+	};
+	conversations: DbConversation[];
+}
+
+/**
+ * Convert database conversations to UIMessage format
+ */
+function convertToUIMessages(conversations: DbConversation[]): UIMessage[] {
+	return conversations.map((conv) => ({
+		id: `db-${conv.id}`,
+		role: conv.role,
+		parts: [{ type: "text" as const, text: conv.content }],
+		createdAt: new Date(conv.timestamp),
+	}));
+}
+
 // Helper function to extract text content from UIMessage parts
 function getMessageText(parts: Array<{ type: string; text?: string }>): string {
 	return parts
@@ -40,6 +75,7 @@ function getMessageText(parts: Array<{ type: string; text?: string }>): string {
 
 export default function Home() {
 	const [inputValue, setInputValue] = useState("");
+	const [isLoadingHistory, setIsLoadingHistory] = useState(true);
 
 	// Create transport with useMemo to avoid recreation
 	const transport = useMemo(
@@ -47,17 +83,41 @@ export default function Home() {
 		[],
 	);
 
-	const { messages, sendMessage, status, stop } = useChat({
+	const { messages, sendMessage, status, stop, setMessages } = useChat({
 		transport,
 	});
 
+	// Load conversation history on mount
+	useEffect(() => {
+		async function loadHistory() {
+			try {
+				const response = await fetch("/api/sessions/current");
+				if (response.ok) {
+					const data: SessionResponse = await response.json();
+					if (data.conversations && data.conversations.length > 0) {
+						const uiMessages = convertToUIMessages(data.conversations);
+						setMessages(uiMessages);
+					}
+				}
+			} catch (error) {
+				console.error("Failed to load conversation history:", error);
+			} finally {
+				setIsLoadingHistory(false);
+			}
+		}
+		loadHistory();
+	}, [setMessages]);
+
 	const isLoading = status === "submitted" || status === "streaming";
 
-	const handleSendMessage = async (text: string) => {
-		if (!text.trim()) return;
-		setInputValue("");
-		await sendMessage({ text });
-	};
+	const handleSendMessage = useCallback(
+		async (text: string) => {
+			if (!text.trim()) return;
+			setInputValue("");
+			await sendMessage({ text });
+		},
+		[sendMessage],
+	);
 
 	return (
 		<main className="flex min-h-screen flex-col items-center justify-center p-8">
@@ -72,7 +132,16 @@ export default function Home() {
 					<div className="flex-1 min-h-0 border rounded-lg overflow-hidden">
 						<Conversation className="h-full">
 							<ConversationContent>
-								{messages.length === 0 ? (
+								{isLoadingHistory ? (
+									<div className="flex items-center justify-center h-full">
+										<div className="flex items-center gap-2">
+											<Loader />
+											<span className="text-muted-foreground text-sm">
+												Loading conversation history...
+											</span>
+										</div>
+									</div>
+								) : messages.length === 0 ? (
 									<ConversationEmptyState
 										title="No messages yet"
 										description="Start a conversation with the Claude Agent"
