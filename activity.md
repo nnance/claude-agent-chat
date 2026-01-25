@@ -3,8 +3,8 @@
 ## Current Status
 
 **Last Updated:** 2026-01-25
-**Tasks Completed:** 1
-**Current Task:** Task 1 - Initialize Next.js project completed
+**Tasks Completed:** 2
+**Current Task:** Task 2 - Configure environment and database setup completed
 
 ---
 
@@ -43,3 +43,41 @@
 - Package.json had `"type": "commonjs"` which conflicted with ESM imports - removed it
 
 **Result:** Task completed successfully. Application running at http://localhost:3002
+
+### 2026-01-25 - Task 2: Configure environment and database setup
+
+**Changes Made:**
+- Created .env and .env.example files with ANTHROPIC_API_KEY and DATABASE_URL placeholders
+- Installed better-sqlite3 and @types/better-sqlite3 for SQLite database
+- Installed tsx for running TypeScript scripts
+- Created lib/db/ directory with database utilities:
+  - `types.ts` - TypeScript interfaces for Session, Conversation, and TaskLog models
+  - `client.ts` - Database connection with schema initialization
+  - `index.ts` - Module exports
+- Created scripts/init-db.ts for standalone database initialization
+- Added npm script `db:init` to run the initialization script
+- Created data/ directory with .gitkeep for database storage
+- Updated .gitignore to exclude database files (*.db, *.db-wal, *.db-shm)
+
+**Database Schema:**
+- `sessions` table: id, created_at, updated_at, status, title
+- `conversations` table: id, session_id, role, content, timestamp, metadata
+- `task_logs` table: id, session_id, task_description, status, result_summary, started_at, completed_at, metadata
+- Foreign key relationships and indexes for session_id
+
+**Commands Run:**
+- `npm install better-sqlite3`
+- `npm install --save-dev @types/better-sqlite3`
+- `npm install --save-dev tsx`
+- `npm run db:init` - database initialized successfully
+- `npm run lint` - passed
+- `npm run format` - passed (fixed 2 files)
+- `npm run typecheck` - passed
+- `npm run build` - passed
+
+**Screenshot:** screenshots/02-database-setup.png
+
+**Issues Encountered:**
+- None
+
+**Result:** Task completed successfully. Database initialized with all required tables.

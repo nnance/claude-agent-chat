@@ -33,7 +33,7 @@ Building a web application that provides a chat interface for interacting with a
       "Create database schema with conversations, sessions, and task_logs tables",
       "Write database initialization script"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "setup",
