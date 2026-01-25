@@ -120,37 +120,60 @@ export default function Home() {
 	);
 
 	return (
-		<main className="flex min-h-screen flex-col items-center justify-center p-8">
-			<Card className="w-full max-w-3xl h-[600px] flex flex-col">
-				<CardHeader>
-					<CardTitle>Claude Agent Chat</CardTitle>
-					<CardDescription>
-						Chat interface for interacting with a locally-hosted Claude Agent
-					</CardDescription>
+		<main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-6 md:p-8 bg-gradient-to-b from-background to-muted/20">
+			<Card className="w-full max-w-3xl h-[calc(100vh-2rem)] sm:h-[calc(100vh-3rem)] md:h-[700px] flex flex-col shadow-lg border-border/50">
+				<CardHeader className="pb-3 border-b">
+					<div className="flex items-center gap-3">
+						<div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
+							<MessageCircle className="h-5 w-5 text-primary" />
+						</div>
+						<div>
+							<CardTitle className="text-lg">Claude Agent Chat</CardTitle>
+							<CardDescription className="text-xs">
+								Interact with your locally-hosted Claude Agent
+							</CardDescription>
+						</div>
+					</div>
 				</CardHeader>
-				<CardContent className="flex flex-col flex-1 min-h-0 gap-4">
-					<div className="flex-1 min-h-0 border rounded-lg overflow-hidden">
+				<CardContent className="flex flex-col flex-1 min-h-0 p-0">
+					<div className="flex-1 min-h-0 overflow-hidden">
 						<Conversation className="h-full">
-							<ConversationContent>
+							<ConversationContent className="gap-4 p-4 sm:p-6">
 								{isLoadingHistory ? (
 									<div className="flex items-center justify-center h-full">
-										<div className="flex items-center gap-2">
-											<Loader />
+										<div className="flex flex-col items-center gap-3 animate-thinking">
+											<Loader size={24} />
 											<span className="text-muted-foreground text-sm">
-												Loading conversation history...
+												Loading conversation...
 											</span>
 										</div>
 									</div>
 								) : messages.length === 0 ? (
 									<ConversationEmptyState
-										title="No messages yet"
-										description="Start a conversation with the Claude Agent"
-										icon={<MessageCircle className="h-8 w-8" />}
+										title="Start a conversation"
+										description="Ask Claude to help you with tasks on your computer"
+										icon={
+											<div className="flex items-center justify-center w-16 h-16 rounded-full bg-muted">
+												<MessageCircle className="h-8 w-8 text-muted-foreground" />
+											</div>
+										}
+										className="opacity-80"
 									/>
 								) : (
-									messages.map((msg) => (
-										<Message key={msg.id} from={msg.role}>
-											<MessageContent>
+									messages.map((msg, index) => (
+										<Message
+											key={msg.id}
+											from={msg.role}
+											className="animate-message-in"
+											style={{ animationDelay: `${index * 0.05}s` }}
+										>
+											<MessageContent
+												className={
+													msg.role === "user"
+														? "user-message-bubble rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm"
+														: "assistant-message"
+												}
+											>
 												<MessageResponse>
 													{getMessageText(msg.parts)}
 												</MessageResponse>
@@ -160,50 +183,57 @@ export default function Home() {
 								)}
 								{isLoading &&
 									messages[messages.length - 1]?.role === "user" && (
-										<Message from="assistant">
+										<Message from="assistant" className="animate-message-in">
 											<MessageContent>
-												<div className="flex items-center gap-2">
-													<Loader />
-													<span className="text-muted-foreground text-sm">
-														Thinking...
+												<div className="thinking-indicator flex items-center gap-3 px-4 py-3 rounded-2xl rounded-tl-sm w-fit">
+													<Loader size={18} className="text-primary" />
+													<span className="text-muted-foreground text-sm animate-thinking">
+														Claude is thinking...
 													</span>
 												</div>
 											</MessageContent>
 										</Message>
 									)}
 							</ConversationContent>
-							<ConversationScrollButton />
+							<ConversationScrollButton className="shadow-md" />
 						</Conversation>
 					</div>
-					<PromptInput
-						className="border rounded-lg"
-						onSubmit={(message) => {
-							handleSendMessage(message.text);
-						}}
-					>
-						<PromptInputTextarea
-							placeholder="Type your message..."
-							value={inputValue}
-							onChange={(e) => setInputValue(e.target.value)}
-							disabled={isLoading}
-						/>
-						<PromptInputFooter>
-							<div className="text-xs text-muted-foreground">
-								{isLoading ? (
-									"Agent is processing..."
-								) : (
-									<span className="hidden sm:inline">
-										Press Enter to send, Shift+Enter for new line
-									</span>
-								)}
-							</div>
-							<PromptInputSubmit
-								status={status}
-								onStop={stop}
-								disabled={!inputValue.trim() && !isLoading}
+					<div className="p-3 sm:p-4 border-t bg-background/80 backdrop-blur-sm">
+						<PromptInput
+							className="border rounded-xl bg-background shadow-sm focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 transition-all"
+							onSubmit={(message) => {
+								handleSendMessage(message.text);
+							}}
+						>
+							<PromptInputTextarea
+								placeholder="Message Claude..."
+								value={inputValue}
+								onChange={(e) => setInputValue(e.target.value)}
+								disabled={isLoading}
+								className="min-h-[52px] resize-none border-0 focus-visible:ring-0 bg-transparent"
 							/>
-						</PromptInputFooter>
-					</PromptInput>
+							<PromptInputFooter className="px-3 pb-3">
+								<div className="text-xs text-muted-foreground">
+									{isLoading ? (
+										<span className="flex items-center gap-2">
+											<span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+											Processing...
+										</span>
+									) : (
+										<span className="hidden sm:inline opacity-60">
+											Enter to send · Shift+Enter for new line
+										</span>
+									)}
+								</div>
+								<PromptInputSubmit
+									status={status}
+									onStop={stop}
+									disabled={!inputValue.trim() && !isLoading}
+									className="rounded-lg"
+								/>
+							</PromptInputFooter>
+						</PromptInput>
+					</div>
 				</CardContent>
 			</Card>
 		</main>
