@@ -222,7 +222,7 @@ Building a web application that provides a chat interface for interacting with a
       "Log errors for debugging",
       "Handle API key missing/invalid scenarios"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "testing",

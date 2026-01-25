@@ -19,6 +19,14 @@ import type { Conversation } from "@/lib/db";
 export const runtime = "nodejs";
 export const maxDuration = 300; // 5 minutes max for long-running tasks
 
+/**
+ * Check if ANTHROPIC_API_KEY is configured
+ */
+function isApiKeyConfigured(): boolean {
+	const apiKey = process.env.ANTHROPIC_API_KEY;
+	return Boolean(apiKey && apiKey.length > 0 && apiKey !== "your-api-key-here");
+}
+
 // Part types for Vercel AI SDK v3 UIMessage format
 interface TextPart {
 	type: "text";
@@ -109,10 +117,28 @@ function isResultMessage(message: SDKMessage): message is SDKResultMessage {
  */
 export async function POST(request: Request) {
 	try {
+		// Check if API key is configured
+		if (!isApiKeyConfigured()) {
+			console.error(
+				"API key error: ANTHROPIC_API_KEY is not configured or invalid",
+			);
+			return new Response(
+				JSON.stringify({
+					error:
+						"API key not configured. Please set ANTHROPIC_API_KEY in your .env file.",
+				}),
+				{
+					status: 503,
+					headers: { "Content-Type": "application/json" },
+				},
+			);
+		}
+
 		const body: ChatRequestBody = await request.json();
 		const { messages } = body;
 
 		if (!messages || messages.length === 0) {
+			console.error("Validation error: No messages provided");
 			return new Response(JSON.stringify({ error: "Messages are required" }), {
 				status: 400,
 				headers: { "Content-Type": "application/json" },
@@ -125,6 +151,9 @@ export async function POST(request: Request) {
 		// Get the latest user message
 		const latestMessage = messages[messages.length - 1];
 		if (latestMessage.role !== "user") {
+			console.error("Validation error: Last message is not from user", {
+				role: latestMessage.role,
+			});
 			return new Response(
 				JSON.stringify({ error: "Last message must be from user" }),
 				{
@@ -137,6 +166,7 @@ export async function POST(request: Request) {
 		// Extract text content from the message (handles both parts array and legacy content)
 		const userMessageContent = extractTextFromUIMessage(latestMessage);
 		if (!userMessageContent) {
+			console.error("Validation error: Empty message content");
 			return new Response(
 				JSON.stringify({ error: "Message content is required" }),
 				{
@@ -337,7 +367,32 @@ export async function POST(request: Request) {
 				} catch (error) {
 					const errorMessage =
 						error instanceof Error ? error.message : "Unknown error";
-					console.error("Claude Agent SDK error:", errorMessage);
+					const errorStack = error instanceof Error ? error.stack : undefined;
+
+					// Log detailed error information for debugging
+					console.error("Claude Agent SDK error:", {
+						message: errorMessage,
+						stack: errorStack,
+						taskId: taskLog.id,
+						sessionId: session.id,
+						timestamp: new Date().toISOString(),
+					});
+
+					// Determine user-friendly error message
+					let userFriendlyMessage = errorMessage;
+					if (errorMessage.includes("API key")) {
+						userFriendlyMessage =
+							"API key error. Please check your ANTHROPIC_API_KEY configuration.";
+					} else if (errorMessage.includes("rate limit")) {
+						userFriendlyMessage =
+							"Rate limit exceeded. Please wait a moment and try again.";
+					} else if (errorMessage.includes("network")) {
+						userFriendlyMessage =
+							"Network error. Please check your internet connection.";
+					} else if (errorMessage.includes("exited with code")) {
+						userFriendlyMessage =
+							"Agent process error. The task could not be completed.";
+					}
 
 					// Mark task as failed with error details
 					executionMetadata.error = errorMessage;
@@ -347,8 +402,8 @@ export async function POST(request: Request) {
 					});
 					failTaskLog(taskLog.id, `Error: ${errorMessage}`);
 
-					// Send error in stream format
-					const errorChunk = `3:${JSON.stringify(errorMessage)}\n`;
+					// Send error in stream format with user-friendly message
+					const errorChunk = `3:${JSON.stringify(userFriendlyMessage)}\n`;
 					controller.enqueue(encoder.encode(errorChunk));
 					controller.close();
 				}
@@ -366,10 +421,26 @@ export async function POST(request: Request) {
 	} catch (error) {
 		const errorMessage =
 			error instanceof Error ? error.message : "Unknown error";
-		console.error("Chat API error:", errorMessage);
-		return new Response(JSON.stringify({ error: errorMessage }), {
-			status: 500,
-			headers: { "Content-Type": "application/json" },
+		const errorStack = error instanceof Error ? error.stack : undefined;
+
+		// Log detailed error for debugging
+		console.error("Chat API error:", {
+			message: errorMessage,
+			stack: errorStack,
+			timestamp: new Date().toISOString(),
 		});
+
+		// Return user-friendly error response
+		return new Response(
+			JSON.stringify({
+				error:
+					"An error occurred while processing your request. Please try again.",
+				details: errorMessage,
+			}),
+			{
+				status: 500,
+				headers: { "Content-Type": "application/json" },
+			},
+		);
 	}
 }
