@@ -3,8 +3,8 @@
 ## Current Status
 
 **Last Updated:** 2026-01-25
-**Tasks Completed:** 10
-**Current Task:** Task 10 - Implement conversation history persistence completed
+**Tasks Completed:** 11
+**Current Task:** Task 11 - Add task execution logging completed
 
 ---
 
@@ -410,3 +410,47 @@
   - Fixed by using `setMessages()` function to update messages after API fetch
 
 **Result:** Task completed successfully. Conversation history now persists in SQLite database and loads on page refresh.
+
+### 2026-01-25 - Task 11: Add task execution logging
+
+**Changes Made:**
+- Updated app/api/chat/route.ts to add task execution logging:
+  - Added imports for task log functions: createTaskLog, updateTaskLogStatus, completeTaskLog, failTaskLog, updateTaskLog
+  - Create task log entry when agent starts processing (with session_id, task_description, and initial metadata)
+  - Update task status to "in_progress" when processing begins
+  - Track tool usage from SDK "tool_progress" messages
+  - Track token usage from SDK result messages
+  - Generate result summary from agent response (first 200 chars)
+  - Update task log with execution metadata (tools_used, token_usage, timestamps)
+  - Complete task log with success status and summary on completion
+  - Fail task log with error message when errors occur
+
+**Task Logging Features:**
+1. Task log entries created when agent starts working - includes user message as task_description
+2. Task status updated as agent progresses - pending → in_progress → completed/failed
+3. Agent summaries stored in task_logs table - first 200 chars of response as result_summary
+4. Task logs linked to session_id - all logs associated with current session
+5. Metadata field tracks detailed execution information:
+   - started_at: ISO timestamp when task began
+   - message_count: number of messages in conversation
+   - tools_used: array of tool names used by agent
+   - token_usage: { input, output } token counts
+   - completed_at: ISO timestamp when task finished
+   - error: error message if task failed
+
+**Commands Run:**
+- `npm run lint` - passed
+- `npm run format` - passed (fixed 1 file)
+- `npm run typecheck` - passed
+- `npm run build` - passed
+- `npm run dev` - server running on port 3000
+
+**Screenshot:** screenshots/11-task-execution-logging.png
+
+**Issues Encountered:**
+- Initial attempt used incorrect SDK message type "tool_use" which doesn't exist
+  - Fixed by using "tool_progress" message type which has tool_name field
+- Unused import warning for TaskLog type
+  - Fixed by removing the unused type import
+
+**Result:** Task completed successfully. Task execution logging now tracks all agent tasks in the database with detailed metadata.

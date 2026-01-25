@@ -8,6 +8,11 @@ import {
 	getOrCreateActiveSession,
 	updateSessionTitle,
 	getConversationsBySessionId,
+	createTaskLog,
+	updateTaskLogStatus,
+	completeTaskLog,
+	failTaskLog,
+	updateTaskLog,
 } from "@/lib/db";
 import type { Conversation } from "@/lib/db";
 
@@ -148,6 +153,19 @@ export async function POST(request: Request) {
 			content: userMessageContent,
 		});
 
+		// Create a task log entry for this agent execution
+		const taskLog = createTaskLog({
+			session_id: session.id,
+			task_description: userMessageContent,
+			metadata: {
+				started_at: new Date().toISOString(),
+				message_count: messages.length,
+			},
+		});
+
+		// Update task status to in_progress
+		updateTaskLogStatus(taskLog.id, "in_progress");
+
 		// Get conversation history for context
 		const conversationHistory = getConversationsBySessionId(session.id);
 		const historyMessages = formatMessagesForAgent(
@@ -163,6 +181,17 @@ export async function POST(request: Request) {
 		// Create a streaming response using the Vercel AI SDK data stream protocol
 		const encoder = new TextEncoder();
 		let fullResponse = "";
+
+		// Track execution metadata for task logging
+		const executionMetadata: {
+			tools_used: string[];
+			token_usage: { input: number; output: number };
+			completed_at?: string;
+			error?: string;
+		} = {
+			tools_used: [],
+			token_usage: { input: 0, output: 0 },
+		};
 
 		const stream = new ReadableStream({
 			async start(controller) {
@@ -180,6 +209,14 @@ export async function POST(request: Request) {
 
 					// Process messages from the agent
 					for await (const message of agentQuery) {
+						// Track tool usage from tool_progress messages
+						if (message.type === "tool_progress" && "tool_name" in message) {
+							const toolName = message.tool_name;
+							if (!executionMetadata.tools_used.includes(toolName)) {
+								executionMetadata.tools_used.push(toolName);
+							}
+						}
+
 						// Handle partial streaming messages
 						if (message.type === "stream_event" && message.event) {
 							const event = message.event;
@@ -209,6 +246,12 @@ export async function POST(request: Request) {
 
 						// Handle result message
 						if (isResultMessage(message)) {
+							// Track token usage
+							executionMetadata.token_usage = {
+								input: message.usage?.input_tokens || 0,
+								output: message.usage?.output_tokens || 0,
+							};
+
 							// Send finish signal with usage data
 							const finishData = {
 								finishReason: message.subtype === "success" ? "stop" : "error",
@@ -240,11 +283,34 @@ export async function POST(request: Request) {
 						}
 					}
 
+					// Complete the task log with success
+					executionMetadata.completed_at = new Date().toISOString();
+
+					// Generate a summary from the response (first 200 chars or full response if shorter)
+					const resultSummary = fullResponse
+						? fullResponse.slice(0, 200) +
+							(fullResponse.length > 200 ? "..." : "")
+						: "Task completed with no response";
+
+					// Update task log with completion status and metadata
+					updateTaskLog(taskLog.id, {
+						metadata: executionMetadata,
+					});
+					completeTaskLog(taskLog.id, resultSummary);
+
 					controller.close();
 				} catch (error) {
 					const errorMessage =
 						error instanceof Error ? error.message : "Unknown error";
 					console.error("Claude Agent SDK error:", errorMessage);
+
+					// Mark task as failed with error details
+					executionMetadata.error = errorMessage;
+					executionMetadata.completed_at = new Date().toISOString();
+					updateTaskLog(taskLog.id, {
+						metadata: executionMetadata,
+					});
+					failTaskLog(taskLog.id, `Error: ${errorMessage}`);
 
 					// Send error in stream format
 					const errorChunk = `3:${JSON.stringify(errorMessage)}\n`;
