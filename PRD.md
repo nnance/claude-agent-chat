@@ -232,3 +232,23 @@ The following features are explicitly NOT included in the MVP phase:
 - Analytics or monitoring dashboards
 - Database backup/export features
 - Custom agent personality/behavior configuration
+
+---
+
+## Agent Instructions
+
+1. Read `activity.md` first to understand current state
+2. Read `PLAN.md` to find the next task with `"passes": false`
+3. Complete all steps for that task
+4. Verify in browser using agent-browser
+5. Update task to `"passes": true`
+6. Log completion in `activity.md`
+7. Repeat until all tasks pass
+
+**Important:** Only modify the `passes` field. Do not remove or rewrite tasks.
+
+---
+
+## Completion Criteria
+
+All tasks marked with `"passes": true`

@@ -1,6 +1,6 @@
 @PRD.md @PLAN.md @activity.md
 
-We are building the project according to the `PLAN.md` and `PRD.md` in this repo.
+We are building the project according to the `PRD.md` in this repo.
 
 First read activity.md to see what was recently accomplished.
 
@@ -18,7 +18,7 @@ If port 3000 is taken, Next.js will automatically try the next available port.
 
 ## Work on Tasks
 
-Open PLAN.md and find the single highest priority task where `"passes": false`.
+Open `PLAN.md` and find the single highest priority task where `"passes": false`.
 
 Work on exactly ONE task:
 
