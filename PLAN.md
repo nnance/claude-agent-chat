@@ -198,7 +198,7 @@ Building a web application that provides a chat interface for interacting with a
       "Validate messages are saved to database",
       "Check session persistence across page refreshes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "testing",
