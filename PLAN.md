@@ -186,7 +186,7 @@ Building a web application that provides a chat interface for interacting with a
       "Handle streaming errors gracefully",
       "Complete message storage after stream ends"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "testing",

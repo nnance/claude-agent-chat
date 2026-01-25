@@ -29,7 +29,7 @@ import {
 	PromptInputFooter,
 	PromptInputSubmit,
 } from "@/components/ai-elements/prompt-input";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, AlertCircle } from "lucide-react";
 import { SessionSidebar } from "@/components/session-sidebar";
 
 // Database conversation type
@@ -85,7 +85,7 @@ export default function Home() {
 		[],
 	);
 
-	const { messages, sendMessage, status, stop, setMessages } = useChat({
+	const { messages, sendMessage, status, stop, setMessages, error } = useChat({
 		transport,
 	});
 
@@ -245,6 +245,24 @@ export default function Home() {
 												</MessageContent>
 											</Message>
 										)}
+									{error && (
+										<Message from="assistant" className="animate-message-in">
+											<MessageContent>
+												<div className="flex items-start gap-3 px-4 py-3 rounded-2xl rounded-tl-sm bg-destructive/10 border border-destructive/20 w-fit max-w-md">
+													<AlertCircle className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
+													<div className="flex flex-col gap-1">
+														<span className="text-sm font-medium text-destructive">
+															Error
+														</span>
+														<span className="text-sm text-muted-foreground">
+															{error.message ||
+																"An error occurred while processing your message. Please try again."}
+														</span>
+													</div>
+												</div>
+											</MessageContent>
+										</Message>
+									)}
 								</ConversationContent>
 								<ConversationScrollButton className="shadow-md" />
 							</Conversation>
@@ -265,7 +283,12 @@ export default function Home() {
 								/>
 								<PromptInputFooter className="px-3 pb-3">
 									<div className="text-xs text-muted-foreground">
-										{isLoading ? (
+										{error ? (
+											<span className="flex items-center gap-2 text-destructive">
+												<AlertCircle className="h-3 w-3" />
+												Error occurred - try again
+											</span>
+										) : isLoading ? (
 											<span className="flex items-center gap-2">
 												<span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
 												Processing...
