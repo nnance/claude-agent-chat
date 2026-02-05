@@ -208,9 +208,10 @@ export async function POST(request: Request) {
 				? `Previous conversation:\n${historyMessages.map((m) => `${m.role}: ${m.content}`).join("\n")}\n\nUser: ${userMessageContent}`
 				: userMessageContent;
 
-		// Create a streaming response using the Vercel AI SDK data stream protocol
+		// Create a streaming response using SSE format for AI SDK v6 DefaultChatTransport
 		const encoder = new TextEncoder();
 		let fullResponse = "";
+		const messageId = `msg-${Date.now()}`;
 
 		// Track execution metadata for task logging
 		const executionMetadata: {
@@ -272,6 +273,12 @@ export async function POST(request: Request) {
 						},
 					});
 
+					// Send text-start event
+					let textStarted = false;
+					const sendSSE = (data: string) => {
+						controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+					};
+
 					// Process messages from the agent
 					for await (const message of agentQuery) {
 						// Track tool usage from tool_progress messages
@@ -290,11 +297,13 @@ export async function POST(request: Request) {
 								event.delta &&
 								"text" in event.delta
 							) {
+								if (!textStarted) {
+									sendSSE(JSON.stringify({ type: "text-start", id: messageId }));
+									textStarted = true;
+								}
 								const text = event.delta.text;
 								fullResponse += text;
-								// Format as Vercel AI SDK data stream protocol: "0:text\n"
-								const chunk = `0:${JSON.stringify(text)}\n`;
-								controller.enqueue(encoder.encode(chunk));
+								sendSSE(JSON.stringify({ type: "text-delta", id: messageId, delta: text }));
 							}
 						}
 
@@ -303,9 +312,10 @@ export async function POST(request: Request) {
 						if (textContent && message.type === "assistant") {
 							// Only use this if we haven't received streaming content
 							if (fullResponse === "") {
+								sendSSE(JSON.stringify({ type: "text-start", id: messageId }));
+								textStarted = true;
 								fullResponse = textContent;
-								const chunk = `0:${JSON.stringify(textContent)}\n`;
-								controller.enqueue(encoder.encode(chunk));
+								sendSSE(JSON.stringify({ type: "text-delta", id: messageId, delta: textContent }));
 							}
 						}
 
@@ -316,19 +326,14 @@ export async function POST(request: Request) {
 								input: message.usage?.input_tokens || 0,
 								output: message.usage?.output_tokens || 0,
 							};
-
-							// Send finish signal with usage data
-							const finishData = {
-								finishReason: message.subtype === "success" ? "stop" : "error",
-								usage: {
-									promptTokens: message.usage?.input_tokens || 0,
-									completionTokens: message.usage?.output_tokens || 0,
-								},
-							};
-							const finishChunk = `d:${JSON.stringify(finishData)}\n`;
-							controller.enqueue(encoder.encode(finishChunk));
 						}
 					}
+
+					// Close the text part if we started one
+					if (textStarted) {
+						sendSSE(JSON.stringify({ type: "text-end", id: messageId }));
+					}
+					sendSSE("[DONE]");
 
 					// Store the assistant response in database
 					if (fullResponse) {
@@ -402,9 +407,9 @@ export async function POST(request: Request) {
 					});
 					failTaskLog(taskLog.id, `Error: ${errorMessage}`);
 
-					// Send error in stream format with user-friendly message
-					const errorChunk = `3:${JSON.stringify(userFriendlyMessage)}\n`;
-					controller.enqueue(encoder.encode(errorChunk));
+					// Send error in SSE format
+					sendSSE(JSON.stringify({ type: "error", errorText: userFriendlyMessage }));
+					sendSSE("[DONE]");
 					controller.close();
 				}
 			},
@@ -412,8 +417,7 @@ export async function POST(request: Request) {
 
 		return new Response(stream, {
 			headers: {
-				"Content-Type": "text/plain; charset=utf-8",
-				"X-Vercel-AI-Data-Stream": "v1",
+				"Content-Type": "text/event-stream",
 				"Cache-Control": "no-cache",
 				Connection: "keep-alive",
 			},
