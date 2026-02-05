@@ -11,6 +11,7 @@ import {
 	MessageSquare,
 	Check,
 	Archive,
+	Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +28,8 @@ interface SessionSidebarProps {
 	currentSessionId: number | null;
 	onSessionSelect: (sessionId: number) => void;
 	onNewSession: () => void;
+	onDeleteSession: (sessionId: number) => void;
+	refreshKey?: number;
 }
 
 /**
@@ -69,6 +72,8 @@ export function SessionSidebar({
 	currentSessionId,
 	onSessionSelect,
 	onNewSession,
+	onDeleteSession,
+	refreshKey,
 }: SessionSidebarProps) {
 	const [isExpanded, setIsExpanded] = useState(true);
 	const [sessions, setSessions] = useState<Session[]>([]);
@@ -99,6 +104,13 @@ export function SessionSidebar({
 			fetchSessions();
 		}
 	}, [currentSessionId, fetchSessions]);
+
+	// Refresh sessions when refreshKey changes (e.g., session deleted)
+	useEffect(() => {
+		if (refreshKey) {
+			fetchSessions();
+		}
+	}, [refreshKey, fetchSessions]);
 
 	return (
 		<div
@@ -171,7 +183,7 @@ export function SessionSidebar({
 								type="button"
 								onClick={() => onSessionSelect(session.id)}
 								className={cn(
-									"w-full flex items-center gap-2 p-2 rounded-lg text-left transition-colors",
+									"group w-full flex items-center gap-2 p-2 rounded-lg text-left transition-colors",
 									"hover:bg-accent/50",
 									currentSessionId === session.id &&
 										"bg-accent text-accent-foreground",
@@ -180,14 +192,34 @@ export function SessionSidebar({
 							>
 								<StatusIcon status={session.status} />
 								{isExpanded && (
-									<div className="flex-1 min-w-0">
-										<div className="text-sm font-medium truncate">
-											{session.title || "New Chat"}
+									<>
+										<div className="flex-1 min-w-0">
+											<div className="text-sm font-medium truncate">
+												{session.title || "New Chat"}
+											</div>
+											<div className="text-xs text-muted-foreground">
+												{formatDate(session.updated_at)}
+											</div>
 										</div>
-										<div className="text-xs text-muted-foreground">
-											{formatDate(session.updated_at)}
+										<div
+											role="button"
+											tabIndex={0}
+											onClick={(e) => {
+												e.stopPropagation();
+												onDeleteSession(session.id);
+											}}
+											onKeyDown={(e) => {
+												if (e.key === "Enter" || e.key === " ") {
+													e.stopPropagation();
+													onDeleteSession(session.id);
+												}
+											}}
+											className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/10 transition-opacity"
+											aria-label="Delete session"
+										>
+											<Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
 										</div>
-									</div>
+									</>
 								)}
 							</button>
 						))

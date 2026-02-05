@@ -78,6 +78,7 @@ export default function Home() {
 	const [inputValue, setInputValue] = useState("");
 	const [isLoadingHistory, setIsLoadingHistory] = useState(true);
 	const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
+	const [sidebarRefreshKey, setSidebarRefreshKey] = useState(0);
 
 	// Create transport with useMemo to avoid recreation
 	const transport = useMemo(
@@ -132,6 +133,27 @@ export default function Home() {
 		[currentSessionId, loadSessionHistory],
 	);
 
+	// Handle deleting a session
+	const handleDeleteSession = useCallback(
+		async (sessionId: number) => {
+			try {
+				const response = await fetch(`/api/sessions/${sessionId}`, {
+					method: "DELETE",
+				});
+				if (response.ok) {
+					if (sessionId === currentSessionId) {
+						setMessages([]);
+						setCurrentSessionId(null);
+					}
+					setSidebarRefreshKey((k) => k + 1);
+				}
+			} catch (error) {
+				console.error("Failed to delete session:", error);
+			}
+		},
+		[currentSessionId, setMessages],
+	);
+
 	// Handle creating a new session
 	const handleNewSession = useCallback(async () => {
 		try {
@@ -168,6 +190,8 @@ export default function Home() {
 				currentSessionId={currentSessionId}
 				onSessionSelect={handleSessionSelect}
 				onNewSession={handleNewSession}
+				onDeleteSession={handleDeleteSession}
+				refreshKey={sidebarRefreshKey}
 			/>
 
 			{/* Main Chat Area */}
